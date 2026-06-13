@@ -3,22 +3,30 @@
 	import type { UgcData } from '$lib/api/ugc';
 	import AssetKind from './AssetKind.svelte';
 	import DropdownCard from './DropdownCard.svelte';
+	import PlaylistCover from './PlaylistCover.svelte';
 	import { dev } from '$app/environment';
-	
+
 	interface Props {
 		asset: UgcData | PlaylistData;
 		assetUrl: string;
 		pairedMode?: UgcData | null;
 		groups: any;
 	}
-	
+
 	let { asset, assetUrl, pairedMode = null, groups }: Props = $props();
-	
+
 	import.meta.env.PROD;
 	let dropdown: DropdownCard;
-	
+
 	// Ensure assetKind is available using Svelte 5 runes
 	const assetKind = $derived(asset?.assetKind ?? null);
+
+	// UGC assets are Map (2) / Prefab (4) / UgcGameVariant (6); anything else is a
+	// playlist (assetKind 5) — mirrors the URL routing convention. Only playlists
+	// get the layered cover (mosaic/hero/tint); UGC keeps its single thumbnail.
+	const isPlaylist = $derived(
+		assetKind != null && assetKind !== 2 && assetKind !== 4 && assetKind !== 6
+	);
 </script>
 
 <div style="position:relative">
@@ -27,11 +35,19 @@
 		<div class="asset-image-wrapper">
 			<a href={assetUrl} class="asset-link">
 				<div class="asset-image-container">
-					<img
-						class="asset-image"
-						src={asset?.thumbnailUrl ? asset.thumbnailUrl : '/placeholder.webp'}
-						alt="thumbnail"
-					/>
+					{#if isPlaylist}
+						<PlaylistCover
+							name={asset.name}
+							thumbnailUrl={asset.thumbnailUrl}
+							coverThumbnails={(asset as PlaylistData).coverThumbnails}
+						/>
+					{:else}
+						<img
+							class="asset-image"
+							src={asset?.thumbnailUrl ? asset.thumbnailUrl : '/placeholder.webp'}
+							alt="thumbnail"
+						/>
+					{/if}
 					<div class="asset-overlay"></div>
 				</div>
 			</a>
@@ -39,16 +55,13 @@
 			{#if pairedMode}
 				<a href={`/modes/${pairedMode.assetId}`} class="gamemode-chip-link">
 					<div class="gamemode-chip">
-						<img 
-							src={pairedMode.thumbnailUrl} 
-							alt={pairedMode.name} 
-							class="chip-thumbnail"
-						/>
+						<img src={pairedMode.thumbnailUrl} alt={pairedMode.name} class="chip-thumbnail" />
 						<span class="chip-name">{pairedMode.name}</span>
 					</div>
 				</a>
 			{:else}
-				<AssetKind assetKind={asset.assetKind} recommended={asset?.recommended || false}></AssetKind>
+				<AssetKind assetKind={asset.assetKind} recommended={asset?.recommended || false}
+				></AssetKind>
 			{/if}
 			<a href={assetUrl} class="asset-name">
 				{asset.name}
@@ -75,91 +88,91 @@
 </div>
 
 <style>
-.gamemode-chip-link {
-	position: absolute;
-	top: 10px;
-	left: 8px;
-	z-index: 10;
-	text-decoration: none;
-	max-width: calc(100% - 16px);
-	transition: transform 0.15s ease-in-out;
-	/* Increase tap target size */
-	padding: 8px;
-	margin: -8px;
-	border-radius: 24px;
-}
-
-/* Only apply hover effects on non-touch devices */
-@media (hover: hover) {
-	.gamemode-chip-link:hover {
-		transform: translateY(-2px);
+	.gamemode-chip-link {
+		position: absolute;
+		top: 10px;
+		left: 8px;
+		z-index: 10;
+		text-decoration: none;
+		max-width: calc(100% - 16px);
+		transition: transform 0.15s ease-in-out;
+		/* Increase tap target size */
+		padding: 8px;
+		margin: -8px;
+		border-radius: 24px;
 	}
 
-	.gamemode-chip-link:hover .gamemode-chip {
-		background-color: var(--button-bg);
+	/* Only apply hover effects on non-touch devices */
+	@media (hover: hover) {
+		.gamemode-chip-link:hover {
+			transform: translateY(-2px);
+		}
+
+		.gamemode-chip-link:hover .gamemode-chip {
+			background-color: var(--button-bg);
+		}
 	}
-}
 
-.gamemode-chip {
-	display: inline-flex;
-	align-items: center;
-	gap: 6px;
-	padding: 0 12px 0 0;
-	border-radius: 20px;
-	background-color: var(--asset-card-bg);
-	color: white;
-	font-size: 0.875rem; /* Slightly larger font */
-	overflow: hidden;
-	transition: background-color 0.15s ease-in-out;
-	/* Add touch feedback */
-	-webkit-tap-highlight-color: rgba(255, 255, 255, 0.2);
-}
-
-.chip-thumbnail {
-	width: 40px;
-	height: 40px;
-	border-radius: 20px 0 0 20px;
-	object-fit: cover;
-	flex-shrink: 0;
-}
-
-.chip-name {
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-	flex: 1;
-}
-.asset-link {
-	display: block;
-	width: 100%;
-	height: 100%;
-	position: absolute;
-	top: 0;
-	left: 0;
-	z-index: 1;
-}
-
-.asset-image-container {
-	position: relative;
-	width: 100%;
-	height: 100%;
-}
-
-.asset-overlay {
-	position: absolute;
-	top: 0;
-	left: 0;
-	width: 100%;
-	height: 100%;
-	background: linear-gradient(to bottom, rgba(0,0,0,0) 70%, rgba(0,0,0,0.7) 100%);
-	z-index: 2;
-	opacity: 0.8;
-	transition: opacity 0.3s ease;
-}
-
-@media (hover: hover) {
-	.asset:hover .asset-overlay {
-		opacity: 0.4;
+	.gamemode-chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		padding: 0 12px 0 0;
+		border-radius: 20px;
+		background-color: var(--asset-card-bg);
+		color: white;
+		font-size: 0.875rem; /* Slightly larger font */
+		overflow: hidden;
+		transition: background-color 0.15s ease-in-out;
+		/* Add touch feedback */
+		-webkit-tap-highlight-color: rgba(255, 255, 255, 0.2);
 	}
-}
+
+	.chip-thumbnail {
+		width: 40px;
+		height: 40px;
+		border-radius: 20px 0 0 20px;
+		object-fit: cover;
+		flex-shrink: 0;
+	}
+
+	.chip-name {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		flex: 1;
+	}
+	.asset-link {
+		display: block;
+		width: 100%;
+		height: 100%;
+		position: absolute;
+		top: 0;
+		left: 0;
+		z-index: 1;
+	}
+
+	.asset-image-container {
+		position: relative;
+		width: 100%;
+		height: 100%;
+	}
+
+	.asset-overlay {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 70%, rgba(0, 0, 0, 0.7) 100%);
+		z-index: 2;
+		opacity: 0.8;
+		transition: opacity 0.3s ease;
+	}
+
+	@media (hover: hover) {
+		.asset:hover .asset-overlay {
+			opacity: 0.4;
+		}
+	}
 </style>

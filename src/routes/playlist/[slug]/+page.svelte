@@ -5,6 +5,7 @@
 	import { Delete, Edit, Private, Public, Plus } from '$lib/components/icons';
 	import Dropdown from '$lib/components/Dropdown.svelte';
 	import PairedAssetsContainer from '$lib/components/PairedAssetsContainer.svelte';
+	import PlaylistCover from '$lib/components/PlaylistCover.svelte';
 	import { playlistModal, addToPlaylistModal } from '../../../stores/modal';
 	import { favoritesAdd, favoritesDelete } from '$lib/api/favorites';
 	import { user } from '../../../stores/user';
@@ -22,6 +23,20 @@
 	// Check if playlist is empty (no pairs and no regular assets)
 	const isEmptyPlaylist = $derived(!data.pairs?.length && !data.assets?.length);
 	const isOwner = $derived(currentUser && data.playlist.userId === currentUser.id);
+
+	// First up-to-4 map thumbnails for the layered cover fallback, sourced from
+	// already-loaded data (no extra request). Prefer pairs; fall back to assets.
+	const coverThumbnails = $derived.by(() => {
+		const fromPairs = (data.pairs ?? [])
+			.map((p: { map?: { thumbnailUrl?: string } | null }) => p.map?.thumbnailUrl)
+			.filter((u: string | undefined): u is string => !!u);
+		if (fromPairs.length) return fromPairs.slice(0, 4);
+		return (data.assets ?? [])
+			.filter((a: { assetKind?: number }) => a.assetKind === 2)
+			.map((a: { thumbnailUrl?: string }) => a.thumbnailUrl)
+			.filter((u: string | undefined): u is string => !!u)
+			.slice(0, 4);
+	});
 
 	function openAddToPlaylistModal() {
 		if (addToPlaylistModalVar?.open) {
@@ -51,9 +66,10 @@
 	<div class="playlist-header">
 		<div class="playlist-content">
 			<div class="playlist-thumbnail">
-				<img
-					src={data.playlist.thumbnailUrl || '/placeholder.webp'}
-					alt="thumbnail"
+				<PlaylistCover
+					name={data.playlist.name}
+					thumbnailUrl={data.playlist.thumbnailUrl}
+					{coverThumbnails}
 				/>
 			</div>
 			<div class="playlist-info">
@@ -85,20 +101,20 @@
 				</div>
 			</div>
 		</div>
-		
+
 		{#if $user}
 			<div class="playlist-actions">
 				{#if $user.id === data.playlist.userId}
 					<!-- Owner actions - Add Assets is always visible -->
-					<button 
-						class="action-button primary-action" 
+					<button
+						class="action-button primary-action"
 						onclick={openAddToPlaylistModal}
 						aria-label="Add assets to playlist"
 					>
 						<Plus active={false}></Plus>
 						<span class="action-text">Add Assets</span>
 					</button>
-					
+
 					<!-- More actions dropdown for owner -->
 					<Dropdown
 						groups={[
@@ -135,12 +151,14 @@
 					>
 						<button class="action-button secondary-action" aria-label="More options">
 							<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-								<path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+								<path
+									d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"
+								/>
 							</svg>
 						</button>
 					</Dropdown>
 				{/if}
-				
+
 				<!-- Favorite button for all logged in users -->
 				<button
 					class="action-button favorite-action"
@@ -154,7 +172,9 @@
 						: 'unfavorite playlist'}
 				>
 					<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-						<path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+						<path
+							d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+						/>
 					</svg>
 				</button>
 			</div>
@@ -169,16 +189,25 @@
 				<h3>Your playlist is empty</h3>
 				<p>Start building your collection by adding your favorite maps, modes, and prefabs.</p>
 				<button onclick={openAddToPlaylistModal} class="sidebar-link-button">
-					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
-						<path d="M12 2C12.5523 2 13 2.44772 13 3V11H21C21.5523 11 22 11.4477 22 12C22 12.5523 21.5523 13 21 13H13V21C13 21.5523 12.5523 22 12 22C11.4477 22 11 21.5523 11 21V13H3C2.44772 13 2 12.5523 2 12C2 11.4477 2.44772 11 3 11H11V3C11 2.44772 11.4477 2 12 2Z" fill="currentColor"/>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						width="24"
+						height="24"
+						viewBox="0 0 24 24"
+						fill="none"
+					>
+						<path
+							d="M12 2C12.5523 2 13 2.44772 13 3V11H21C21.5523 11 22 11.4477 22 12C22 12.5523 21.5523 13 21 13H13V21C13 21.5523 12.5523 22 12 22C11.4477 22 11 21.5523 11 21V13H3C2.44772 13 2 12.5523 2 12C2 11.4477 2.44772 11 3 11H11V3C11 2.44772 11.4477 2 12 2Z"
+							fill="currentColor"
+						/>
 					</svg>
 					<span>Add Assets</span>
 				</button>
 			</div>
 		</div>
 	{:else}
-		<PairedAssetsContainer 
-			browseData={data} 
+		<PairedAssetsContainer
+			browseData={data}
 			pairs={data.pairs}
 			pairsTotalPages={data.pairsTotalPages}
 			pairsTotalResults={data.pairsTotalResults}
@@ -233,11 +262,11 @@
 		border: none;
 		cursor: pointer;
 		transition: all 0.3s ease-in-out;
-		
+
 		/* Colors and hover effects like .favorite button */
 		background-color: var(--button-bg);
 		color: var(--button-color);
-		
+
 		/* Positioning for the empty state */
 		margin: 1rem auto 0;
 		float: none;
@@ -290,13 +319,11 @@
 
 	.playlist-thumbnail {
 		flex-shrink: 0;
-	}
-
-	.playlist-thumbnail img {
+		position: relative;
 		width: 200px;
 		height: 112px;
-		object-fit: cover;
 		border-radius: 12px;
+		overflow: hidden;
 	}
 
 	.playlist-info {
@@ -474,9 +501,6 @@
 
 		.playlist-thumbnail {
 			align-self: center;
-		}
-
-		.playlist-thumbnail img {
 			width: 280px;
 			height: 157px;
 		}
@@ -508,7 +532,7 @@
 	}
 
 	@media screen and (max-width: 480px) {
-		.playlist-thumbnail img {
+		.playlist-thumbnail {
 			width: 240px;
 			height: 135px;
 		}

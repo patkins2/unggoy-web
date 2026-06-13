@@ -3,6 +3,7 @@
 	import type { UgcData } from '$lib/api/ugc';
 	import AssetKind from './AssetKind.svelte';
 	import SlideUpDrawer from './SlideUpDrawer.svelte';
+	import PlaylistCover from './PlaylistCover.svelte';
 	import { dev } from '$app/environment';
 
 	interface Props {
@@ -19,6 +20,13 @@
 	// Ensure assetKind is available using Svelte 5 runes
 	const assetKind = $derived(asset?.assetKind ?? null);
 
+	// UGC assets are Map (2) / Prefab (4) / UgcGameVariant (6); anything else is a
+	// playlist (assetKind 5) — mirrors the URL routing convention. Only playlists
+	// get the layered cover (mosaic/hero/tint); UGC keeps its single thumbnail.
+	const isPlaylist = $derived(
+		assetKind != null && assetKind !== 2 && assetKind !== 4 && assetKind !== 6
+	);
+
 	function toggleDrawer(event: MouseEvent) {
 		event.stopPropagation();
 		isDrawerOpen = !isDrawerOpen;
@@ -34,11 +42,19 @@
 		<div class="mobile-asset-image-wrapper">
 			<a href={assetUrl} class="asset-link">
 				<div class="asset-image-container">
-					<img
-						class="mobile-asset-image"
-						src={asset?.thumbnailUrl ? asset.thumbnailUrl : '/placeholder.webp'}
-						alt="thumbnail"
-					/>
+					{#if isPlaylist}
+						<PlaylistCover
+							name={asset.name}
+							thumbnailUrl={asset.thumbnailUrl}
+							coverThumbnails={(asset as PlaylistData).coverThumbnails}
+						/>
+					{:else}
+						<img
+							class="mobile-asset-image"
+							src={asset?.thumbnailUrl ? asset.thumbnailUrl : '/placeholder.webp'}
+							alt="thumbnail"
+						/>
+					{/if}
 					<div class="asset-overlay"></div>
 				</div>
 			</a>
@@ -46,16 +62,13 @@
 			{#if pairedMode}
 				<a href={`/modes/${pairedMode.assetId}`} class="gamemode-chip-link">
 					<div class="gamemode-chip">
-						<img
-							src={pairedMode.thumbnailUrl}
-							alt={pairedMode.name}
-							class="chip-thumbnail"
-						/>
+						<img src={pairedMode.thumbnailUrl} alt={pairedMode.name} class="chip-thumbnail" />
 						<span class="chip-name">{pairedMode.name}</span>
 					</div>
 				</a>
 			{:else}
-				<AssetKind assetKind={asset.assetKind} recommended={asset?.recommended || false}></AssetKind>
+				<AssetKind assetKind={asset.assetKind} recommended={asset?.recommended || false}
+				></AssetKind>
 			{/if}
 			<a href={assetUrl} class="asset-name">
 				{asset.name}
@@ -86,107 +99,107 @@
 </div>
 
 <style>
-.mobile-asset-card-wrapper {
-	position: relative;
-	margin-bottom: 16px;
-	width: calc(100% + 48px);
-	margin-left: -24px;
-	margin-right: -24px;
-}
+	.mobile-asset-card-wrapper {
+		position: relative;
+		margin-bottom: 16px;
+		width: calc(100% + 48px);
+		margin-left: -24px;
+		margin-right: -24px;
+	}
 
-.mobile-asset-card {
-	position: relative;
-	background-color: var(--video-bg);
-	border-radius: 0; /* No rounded corners for mobile */
-	overflow: hidden;
-	width: 100%;
-}
+	.mobile-asset-card {
+		position: relative;
+		background-color: var(--video-bg);
+		border-radius: 0; /* No rounded corners for mobile */
+		overflow: hidden;
+		width: 100%;
+	}
 
-.mobile-asset-image-wrapper {
-	position: relative;
-	width: 100%;
-	padding-top: calc(320 / 560 * 100%); /* Aspect ratio of 560 / 320 */
-	border-radius: 0; /* No rounded corners */
-	overflow: hidden;
-}
+	.mobile-asset-image-wrapper {
+		position: relative;
+		width: 100%;
+		padding-top: calc(320 / 560 * 100%); /* Aspect ratio of 560 / 320 */
+		border-radius: 0; /* No rounded corners */
+		overflow: hidden;
+	}
 
-.mobile-asset-image {
-	position: absolute;
-	top: 0;
-	left: 0;
-	width: 100%;
-	height: 100%;
-	object-fit: cover;
-	border-radius: 0; /* No rounded corners */
-}
+	.mobile-asset-image {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		border-radius: 0; /* No rounded corners */
+	}
 
-.gamemode-chip-link {
-	position: absolute;
-	top: 10px;
-	left: 8px;
-	z-index: 10;
-	text-decoration: none;
-	max-width: calc(100% - 16px);
-	transition: transform 0.15s ease-in-out;
-	padding: 8px;
-	margin: -8px;
-	border-radius: 24px;
-}
+	.gamemode-chip-link {
+		position: absolute;
+		top: 10px;
+		left: 8px;
+		z-index: 10;
+		text-decoration: none;
+		max-width: calc(100% - 16px);
+		transition: transform 0.15s ease-in-out;
+		padding: 8px;
+		margin: -8px;
+		border-radius: 24px;
+	}
 
-.gamemode-chip {
-	display: inline-flex;
-	align-items: center;
-	gap: 6px;
-	padding: 0 12px 0 0;
-	border-radius: 20px;
-	background-color: var(--asset-card-bg);
-	color: white;
-	font-size: 0.875rem;
-	overflow: hidden;
-	transition: background-color 0.15s ease-in-out;
-	-webkit-tap-highlight-color: rgba(255, 255, 255, 0.2);
-}
+	.gamemode-chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		padding: 0 12px 0 0;
+		border-radius: 20px;
+		background-color: var(--asset-card-bg);
+		color: white;
+		font-size: 0.875rem;
+		overflow: hidden;
+		transition: background-color 0.15s ease-in-out;
+		-webkit-tap-highlight-color: rgba(255, 255, 255, 0.2);
+	}
 
-.chip-thumbnail {
-	width: 40px;
-	height: 40px;
-	border-radius: 20px 0 0 20px;
-	object-fit: cover;
-	flex-shrink: 0;
-}
+	.chip-thumbnail {
+		width: 40px;
+		height: 40px;
+		border-radius: 20px 0 0 20px;
+		object-fit: cover;
+		flex-shrink: 0;
+	}
 
-.chip-name {
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-	flex: 1;
-}
+	.chip-name {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		flex: 1;
+	}
 
-.asset-link {
-	display: block;
-	width: 100%;
-	height: 100%;
-	position: absolute;
-	top: 0;
-	left: 0;
-	z-index: 1;
-}
+	.asset-link {
+		display: block;
+		width: 100%;
+		height: 100%;
+		position: absolute;
+		top: 0;
+		left: 0;
+		z-index: 1;
+	}
 
-.asset-image-container {
-	position: relative;
-	width: 100%;
-	height: 100%;
-}
+	.asset-image-container {
+		position: relative;
+		width: 100%;
+		height: 100%;
+	}
 
-.asset-overlay {
-	position: absolute;
-	top: 0;
-	left: 0;
-	width: 100%;
-	height: 100%;
-	background: linear-gradient(to bottom, rgba(0,0,0,0) 70%, rgba(0,0,0,0.7) 100%);
-	z-index: 2;
-	opacity: 0.8;
-	transition: opacity 0.3s ease;
-}
+	.asset-overlay {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 70%, rgba(0, 0, 0, 0.7) 100%);
+		z-index: 2;
+		opacity: 0.8;
+		transition: opacity 0.3s ease;
+	}
 </style>

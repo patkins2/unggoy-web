@@ -334,6 +334,9 @@ export interface PlaylistData {
 	description: string;
 	assetKind: number;
 	thumbnailUrl: string;
+	// Up to 4 map thumbnail URLs for the layered cover fallback (mosaic/hero).
+	// Populated by the listing endpoints (browse/me/favorites); absent elsewhere.
+	coverThumbnails?: string[];
 	private: boolean;
 	userId: string;
 	recommended?: boolean;
@@ -363,14 +366,14 @@ export async function playlistCreatePair({
 			gamemodeAssetId
 		}
 	};
-	
+
 	try {
 		const result = await toast.promise(request(context), {
 			loading: 'Adding pair...',
 			success: () => 'Pair added successfully',
 			error: (err: any) => err.body?.message || 'Failed to add pair'
 		});
-		
+
 		await invalidateAll();
 	} catch (error) {
 		console.error('Error creating pair:', error);
@@ -389,7 +392,7 @@ import type { UgcData } from './ugc';
 export interface PlaylistPair {
 	id: string;
 	map?: UgcData | null;
-	gamemode?: UgcData | null;  
+	gamemode?: UgcData | null;
 	createdAt: string;
 }
 
@@ -400,21 +403,19 @@ export interface PlaylistPairsResponse {
 	pageSize: number;
 }
 
-export async function playlistGetPairs(
-	{
-		playlistId,
-		assetKind,
-		sort,
-		order,
-		count,
-		offset,
-		tags,
-		searchTerm,
-		gamertag,
-		ownerOnly,
-		svelteFetch
-	}: PlaylistGetPairsParams
-): Promise<PlaylistPairsResponse> {
+export async function playlistGetPairs({
+	playlistId,
+	assetKind,
+	sort,
+	order,
+	count,
+	offset,
+	tags,
+	searchTerm,
+	gamertag,
+	ownerOnly,
+	svelteFetch
+}: PlaylistGetPairsParams): Promise<PlaylistPairsResponse> {
 	const context: RequestOpts = {
 		path: `/playlist/${playlistId}/pairs`,
 		method: 'GET',
@@ -430,7 +431,7 @@ export async function playlistGetPairs(
 			ownerOnly
 		}
 	};
-	
+
 	const result = await request(context, svelteFetch);
 	return await result.json();
 }
@@ -462,14 +463,14 @@ export async function playlistUpdatePair({
 			gamemodeAssetId
 		}
 	};
-	
+
 	try {
 		const result = await toast.promise(request(context), {
 			loading: 'Updating pair...',
 			success: () => 'Pair updated successfully',
 			error: (err: any) => err.body?.message || 'Failed to update pair'
 		});
-		
+
 		await invalidateAll();
 	} catch (error) {
 		console.error('Error updating pair:', error);
@@ -492,14 +493,14 @@ export async function playlistDeletePair({
 		path: `/playlist/${playlistId}/pair/${pairId}`,
 		method: 'DELETE'
 	};
-	
+
 	try {
 		const result = await toast.promise(request(context), {
 			loading: 'Removing pair...',
 			success: () => 'Pair removed successfully',
 			error: (err: any) => err.body?.message || 'Failed to remove pair'
 		});
-		
+
 		await invalidateAll();
 	} catch (error) {
 		console.error('Error deleting pair:', error);
