@@ -14,6 +14,10 @@
 	import { user } from '../../stores/user';
 	import { onMount } from 'svelte';
 
+	const PAGE_SIZE_OPTIONS = [10, 20, 30];
+	const PAGE_SIZE_STORAGE_KEY = 'unggoy:browse-page-size';
+	const PAGE_SIZE_PATHS = ['/browse', '/browse/playlist', '/playlist/me', '/playlist/favorites'];
+
 	let filterModal: FilterModal;
 	interface Props {
 		browseData: BrowseData;
@@ -22,12 +26,17 @@
 
 	let { browseData, filterTitle }: Props = $props();
 
+	const resolvePageSize = (value: number | undefined) =>
+		value && PAGE_SIZE_OPTIONS.includes(value) ? value : 20;
+
 	// Subscribe to modal stores once at parent level using Svelte 5 runes
 	const addAssetModalVar = $derived($addAssetModal);
 	const playlistModalVar = $derived($playlistModal);
 	const inlineBrowsePairingModalVar = $derived($inlineBrowsePairingModal);
 	const addToPlaylistModalVar = $derived($addToPlaylistModal);
 	const activeUser = $derived($user);
+	const showPageSizeSelector = $derived(PAGE_SIZE_PATHS.includes($page.url.pathname));
+	let selectedPageSize = $state<number>(resolvePageSize(browseData.selectedPageSize ?? browseData.pageSize));
 
 	// Mobile detection
 	let isMobile = $state(false);
@@ -50,8 +59,28 @@
 		if (clampedPage !== browseData.currentPage) {
 			const query = new URLSearchParams(cachedSearchParams);
 			query.set('page', clampedPage.toString());
+			if (showPageSizeSelector) {
+				query.set('count', selectedPageSize.toString());
+			}
 			goto(`?${query.toString()}`);
 		}
+	};
+
+	const updatePageSize = () => {
+		if (!showPageSizeSelector) {
+			return;
+		}
+
+		const parsedPageSize = parseInt(selectedPageSize.toString(), 10);
+		selectedPageSize = resolvePageSize(parsedPageSize);
+
+		localStorage.setItem(PAGE_SIZE_STORAGE_KEY, selectedPageSize.toString());
+
+		const query = new URLSearchParams(cachedSearchParams);
+		query.set('count', selectedPageSize.toString());
+		query.delete('page');
+
+		goto(`?${query.toString()}`);
 	};
 
 	const updateSortOrder = () => {
@@ -95,6 +124,10 @@
 			}
 		}
 
+		if (showPageSizeSelector) {
+			query.set('count', selectedPageSize.toString());
+		}
+
 		// Rset page to 1 when filters change
 		query.delete('page');
 
@@ -119,8 +152,34 @@
 
 	onMount(() => {
 		checkMobile();
+
+		if (showPageSizeSelector) {
+			const rawCount = $page.url.searchParams.get('count');
+			const urlPageSize = parseInt(rawCount || '', 10);
+
+			if (!rawCount) {
+				const savedPageSize = parseInt(localStorage.getItem(PAGE_SIZE_STORAGE_KEY) || '', 10);
+				if (PAGE_SIZE_OPTIONS.includes(savedPageSize)) {
+					selectedPageSize = savedPageSize;
+					const query = new URLSearchParams($page.url.searchParams.toString());
+					query.set('count', savedPageSize.toString());
+					query.delete('page');
+					goto(`?${query.toString()}`, { replaceState: true, noScroll: true, keepFocus: true });
+				}
+			} else if (!PAGE_SIZE_OPTIONS.includes(urlPageSize)) {
+				const query = new URLSearchParams($page.url.searchParams.toString());
+				query.set('count', selectedPageSize.toString());
+				query.delete('page');
+				goto(`?${query.toString()}`, { replaceState: true, noScroll: true, keepFocus: true });
+			}
+		}
+
 		window.addEventListener('resize', checkMobile);
 		return () => window.removeEventListener('resize', checkMobile);
+	});
+
+	$effect(() => {
+		selectedPageSize = resolvePageSize(browseData.selectedPageSize ?? browseData.pageSize);
 	});
 </script>
 
@@ -200,6 +259,22 @@
 			{/if}
 
 			<div class="filter-group">
+				{#if showPageSizeSelector}
+					<div class="text-on-input">
+						<label>Results</label>
+						<select
+							bind:value={selectedPageSize}
+							onchange={updatePageSize}
+							name="PageSizeFilter"
+							class="dropdown-el"
+						>
+							{#each PAGE_SIZE_OPTIONS as pageSize}
+								<option value={pageSize}>{pageSize} / page</option>
+							{/each}
+						</select>
+					</div>
+				{/if}
+
 				<!-- <p class="filter-text">Sort:</p> -->
 				<div class="text-on-input">
 					<label>Sort</label>

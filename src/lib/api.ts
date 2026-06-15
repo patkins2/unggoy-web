@@ -6,6 +6,7 @@ export interface BrowseData {
 	assets: UgcData[] | PlaylistData[];
 	totalPages: number;
 	pageSize: number;
+	selectedPageSize?: number;
 	totalResults: number;
 	currentPage: number;
 	sort: string;
