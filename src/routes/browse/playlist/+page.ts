@@ -4,15 +4,14 @@ import {
 	type PlaylistBrowse,
 	type PlaylistBrowseResponse
 } from '$lib/api/playlist';
+import { resolvePageSize } from '$lib/api';
 
 export const ssr = true;
 export const load: PageLoad = async ({ fetch, url }) => {
 	const fetchParams: PlaylistBrowse = {
 		svelteFetch: fetch
 	};
-	const validPageSizes = [10, 20, 30];
-	const countParam = parseInt(url.searchParams.get('count') || '', 10);
-	const selectedPageSize = validPageSizes.includes(countParam) ? countParam : 20;
+	const selectedPageSize = resolvePageSize(url.searchParams.get('count'));
 	fetchParams.count = selectedPageSize;
 
 	const page = url.searchParams.get('page');

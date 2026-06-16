@@ -1,15 +1,14 @@
 import type { PageLoad } from './$types';
 import { PUBLIC_API_URL } from '$env/static/public';
 import { type UgcBrowseResponse, type UgcBrowse, ugcBrowse } from '$lib/api/ugc';
+import { resolvePageSize } from '$lib/api';
 
 export const ssr = true;
 export const load: PageLoad = async ({ fetch, url }) => {
 	const fetchParams: UgcBrowse = {
 		svelteFetch: fetch
 	};
-	const validPageSizes = [10, 20, 30];
-	const countParam = parseInt(url.searchParams.get('count') || '', 10);
-	const selectedPageSize = validPageSizes.includes(countParam) ? countParam : 20;
+	const selectedPageSize = resolvePageSize(url.searchParams.get('count'));
 	fetchParams.count = selectedPageSize;
 
 	const page = url.searchParams.get('page');
